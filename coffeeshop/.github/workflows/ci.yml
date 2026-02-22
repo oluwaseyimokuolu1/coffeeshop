@@ -7,27 +7,30 @@ on:
     branches: [ main, master ]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.10, 3.11]
+        python-version: ["3.10", "3.11"]
+    
+    permissions:
+      contents: read
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip
+    - name: Cache pip dependencies
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: pip-cache-${{ runner.os }}-${{ matrix.python-version }}-v1
+        key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
         restore-keys: |
-          pip-cache-${{ runner.os }}-${{ matrix.python-version }}-
+          pip-${{ runner.os }}-
 
     - name: Install dependencies
       run: |
@@ -35,14 +38,11 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
-    - name: Lint (Black)
-      run: |
-        python -m black --check .
+    - name: Lint with Black
+      run: python -m black --check .
 
-    - name: Lint (Flake8)
-      run: |
-        python -m flake8 .
+    - name: Lint with Flake8
+      run: python -m flake8 .
 
-    - name: Run tests
-      run: |
-        python -m unittest discover -v tests
+    - name: Run unit tests
+      run: python -m unittest discover -v tests
